@@ -60,7 +60,7 @@
 #include "../common/ssh-utils.h"
 
 
-
+
 
 /* Request types. */
 #define SSH_REQUEST_REQUEST_IDENTITIES    11
@@ -1953,7 +1953,7 @@ ssh_key_to_blob (gcry_sexp_t sexp, int with_secret,
           err = b64dec_start (&b64s, NULL);
           err = err || b64dec_proc (&b64s, certificate, certificate_sexp_b64_len, &certificate_len);
           err = err || b64dec_finish (&b64s);
-          err = err | stream_write_data (stream, certificate, certificate_len);
+          err = err || stream_write_data (stream, certificate, certificate_len);
 
           xfree (certificate);
 
@@ -2299,7 +2299,7 @@ ssh_receive_key (estream_t stream, gcry_sexp_t *key_new, int secret,
       err = err || es_read (stream, b64_cert_buffer, b64_cert_buffer_len, &nread);
       if (err)
         goto out;
-      b64_cert_buffer[b64_cert_buffer_len] = "\0";
+      b64_cert_buffer[b64_cert_buffer_len] = '\0';
 
       es_fclose (stream);
 
