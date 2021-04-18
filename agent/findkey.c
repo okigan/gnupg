@@ -1192,14 +1192,14 @@ agent_public_key_from_file (ctrl_t ctrl,
   gcry_mpi_t array[10];
   gcry_sexp_t curve = NULL;
   gcry_sexp_t flags = NULL;
-  gcry_sexp_t uri_sexp, comment_sexp;
-  const char *uri, *comment;
-  size_t uri_length, comment_length;
-  int uri_intlen, comment_intlen;
+  gcry_sexp_t uri_sexp, comment_sexp, key_type_sexp, certificate_sexp;
+  const char *uri, *comment, *key_type, *certificate;
+  size_t uri_length, comment_length, key_type_length, certificate_length;
+  int uri_intlen, comment_intlen, key_type_intlen, certificate_intlen;
   membuf_t format_mb;
   char *format;
-  void *args[2+7+2+2+1]; /* Size is 2 + max. # of elements + 2 for uri + 2
-                            for comment + end-of-list.  */
+  void *args[2+7+2+2+2+1]; /* Size is 2 + max. # of elements + 2 for uri + 2
+                            for comment + key_type + certificate +  end-of-list.  */
   int argidx;
   gcry_sexp_t list = NULL;
   const char *s;
@@ -1216,7 +1216,7 @@ agent_public_key_from_file (ctrl_t ctrl,
     array[i] = NULL;
 
   err = extract_private_key (s_skey, 0, &algoname, &npkey, NULL, &elems,
-                             array, DIM (array), &curve, &flags);
+                             array, DIM (array), &curve, &flags, &key_type_sexp);
   if (err)
     {
       gcry_sexp_release (s_skey);
@@ -1234,6 +1234,19 @@ agent_public_key_from_file (ctrl_t ctrl,
   comment_sexp = gcry_sexp_find_token (s_skey, "comment", 0);
   if (comment_sexp)
     comment = gcry_sexp_nth_data (comment_sexp, 1, &comment_length);
+
+  key_type = NULL;
+  key_type_length = 0;
+  key_type_sexp = gcry_sexp_find_token (s_skey, "key-type", 0);
+  if (key_type_sexp)
+    key_type = gcry_sexp_nth_data (key_type_sexp, 1, &key_type_length);
+
+  certificate = NULL;
+  certificate_length = 0;
+  certificate_sexp = gcry_sexp_find_token (s_skey, "certificate", 0);
+  if (certificate_sexp)
+    certificate = gcry_sexp_nth_data (certificate_sexp, 1, &certificate_length);
+
 
   gcry_sexp_release (s_skey);
   s_skey = NULL;
@@ -1253,6 +1266,26 @@ agent_public_key_from_file (ctrl_t ctrl,
       args[argidx++] = &array[idx];
     }
   put_membuf_str (&format_mb, ")");
+  
+    if (key_type)
+    {
+      key_type_intlen = (int)key_type_length;
+      put_membuf_str (&format_mb, "(key-type %b)");
+      log_assert (argidx+1 < DIM (args));
+      args[argidx++] = (void *)&key_type_intlen;
+      log_assert (argidx+1 < DIM (args));
+      args[argidx++] = (void*)&key_type;
+    }
+  if (certificate)
+    {
+      certificate_intlen = (int)certificate_length;
+      put_membuf_str (&format_mb, "(certificate %b)");
+      log_assert (argidx+1 < DIM (args));
+      args[argidx++] = (void *)&certificate_intlen;
+      log_assert (argidx+1 < DIM (args));
+      args[argidx++] = (void*)&certificate;
+    }
+	
   if (uri)
     {
       put_membuf_str (&format_mb, "(uri %b)");
